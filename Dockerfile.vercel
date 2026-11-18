@@ -1,0 +1,71 @@
+ # =============================================================================
+ # Multi-stage Dockerfile for Vercel Container Runtime
+ # Spring Boot 3.5.16 / Java 21 / Maven / SQLite (read-only)
+ # =============================================================================
+ 
+ # -----------------------------------------------------------------------------
+ # Build Stage: Compile application and generate SQLite database via Flyway
+ # -----------------------------------------------------------------------------
+ FROM eclipse-temurin:21-jdk-alpine AS builder
+ 
+ # Install SQLite tools and bash for Flyway
+ RUN apk add --no-cache sqlite bash
+ 
+ WORKDIR /app
+ 
+ # Copy Maven wrapper and pom.xml first for dependency caching
+ COPY mvnw .
+ COPY mvnw.cmd .
+ COPY .mvn .mvn
+ COPY pom.xml .
+ 
+ # Download dependencies (cached layer)
+ RUN ./mvnw dependency:go-offline -B
+ 
+ # Copy source code and Flyway migrations
+ COPY src src
+ COPY flyway flyway
+ 
+ # Create database directory and run Flyway migration to generate SQLite database
+ # The database will be created at ./calculadora/db/calculadora-pro.db
+ RUN mkdir -p calculadora/db && \
+     ./mvnw flyway:migrate -Dflyway.configFiles=flyway/flyway-pro.conf --batch-mode --errors
+ 
+ # Build the application JAR (skip tests since they run in CI)
+ RUN ./mvnw clean package -DskipTests -B
+ 
+ # -----------------------------------------------------------------------------
+ # Runtime Stage: Minimal JRE with application and pre-built database
+ # -----------------------------------------------------------------------------
+ FROM eclipse-temurin:21-jre-alpine AS runtime
+ 
+ # Create non-root user for security
+ RUN addgroup -g 1000 -S appgroup && \
+     adduser -u 1000 -S appuser -G appgroup
+ 
+ WORKDIR /app
+ 
+ # Copy the built JAR from builder stage
+ COPY --from=builder /app/target/api-regime-geral.jar app.jar
+ 
+ # Copy the pre-built SQLite database (read-only)
+ COPY --from=builder /app/calculadora/db/calculadora-pro.db ./calculadora/db/calculadora-pro.db
+ 
+ # Change ownership to non-root user
+ RUN chown -R appuser:appgroup /app
+ 
+ # Switch to non-root user
+ USER appuser
+ 
+ # Expose port (Vercel will override via PORT env var)
+ EXPOSE 8080
+ 
+ # JVM options optimized for containerized environments
+ # -XX:+UseContainerSupport: Enable container memory limits awareness
+ # -XX:MaxRAMPercentage=75: Use 75% of container memory for heap
+ # -Djava.security.egd=file:/dev/./urandom: Faster entropy for startup
+ # -Dspring.profiles.active=offline: Activate offline profile
+ ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 -Djava.security.egd=file:/dev/./urandom -Dspring.profiles.active=offline"
+ 
+ # Use exec form for proper signal handling (SIGTERM)
+ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-8080} -Dserver.address=0.0.0.0 -jar app.jar"]

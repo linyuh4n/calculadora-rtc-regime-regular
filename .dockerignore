@@ -1,0 +1,66 @@
+ # Git
+ .git
+ .gitignore
+ 
+ # IDE
+ .idea
+ .vscode
+ *.iml
+ *.ipr
+ *.iws
+ 
+ # Maven
+ target/
+ ~/.m2/repository/
+ 
+ # Build artifacts
+ *.jar
+ *.war
+ *.class
+ 
+ # Logs
+ *.log
+ logs/
+ 
+ # OS
+ .DS_Store
+ Thumbs.db
+ 
+ # Environment
+ .env
+ .env.local
+ .env.*.local
+ 
+ # Docker
+ Dockerfile*
+ docker-compose*
+ .dockerignore
+ 
+ # Vercel
+ vercel.json
+ .vercel
+ 
+ # Test reports
+ target/surefire-reports/
+ target/site/jacoco/
+ 
+ # Temporary files
+ *.tmp
+ *.temp
+ *~
+ 
+ # Database (generated at build time, not needed in context)
+ calculadora/db/*.db
+ 
+ # Documentation (optional, exclude to reduce context size)
+ docs/
+ *.md
+ !README.md
+ CHANGELOG.md
+ CODE_OF_CONDUCT.md
+ CONTRIBUTING.md
+ GOVERNANCE.md
+ MAINTAINERS.md
+ ROADMAP.md
+ SECURITY.md
+ LICENSE
