@@ -1,8 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "docker build -f Dockerfile.vercel .",
-  "devCommand": "docker build -f Dockerfile.vercel . && docker run -p 8080:8080 -e PORT=8080 $(docker build -q -f Dockerfile.vercel .)",
-  "installCommand": "",
   "framework": null,
   "regions": ["gru1"]
 }
